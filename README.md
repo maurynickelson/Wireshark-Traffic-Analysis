@@ -41,10 +41,10 @@ This lab is structured in two parts. Part 1 covers live traffic capture and anal
 Wireshark was installed on the Azure VM and the active Ethernet interface was identified by locating the interface with a live activity graph. A 60-second capture was initiated to observe ambient traffic.
 
 **Screenshot: Wireshark interface selection**
-![Wireshark Installed](WiresharkInstalled.png)
+![Wireshark Installed](screenshots/WiresharkInstalled.png)
 
 **Screenshot: Live packet capture — RDP and TLS traffic**
-![Wireshark Packets](WireSharkPackets.png)
+![Wireshark Packets](screenshots/WireSharkPackets.png)
 
 Initial capture revealed two dominant IPs: the VM's internal address `10.1.0.174` communicating with `67.164.219.149` over TLSv1.2 on port 3389 — the active RDP session used to connect to the VM.
 
@@ -55,17 +55,17 @@ Initial capture revealed two dominant IPs: the VM's internal address `10.1.0.174
 The `dns` filter was applied to isolate DNS query traffic. Initial results showed only Azure infrastructure queries between `10.1.0.174` and `168.63.129.16` (Azure's internal DNS resolver) with no domain names visible in the query section.
 
 **Screenshot: DNS filter — no domain names visible initially**
-![DNS No Names](DNSPacketCapture-NoDNSName.png)
+![DNS No Names](screenshots/DNSPacketCapture-NoDNSName.png)
 
 **Troubleshooting:** Domain names were absent because the VM had previously resolved those domains and cached the results. Windows cached DNS entries do not generate new queries, so Wireshark had nothing to capture.
 
 **Resolution:** The DNS resolver cache was flushed using `ipconfig /flushdns` in PowerShell, then new sites were visited to generate fresh queries.
 
 **Screenshot: DNS cache flush confirmation**
-![DNS Cache Clear](DNS-Cache-Clear.png)
+![DNS Cache Clear](screenshots/DNS-Cache-Clear.png)
 
 **Screenshot: DNS queries with domain names visible after cache flush**
-![DNS After Web Search](DNS-AFTER-WebSearch-Testing_if_see.png)
+![DNS After Web Search](screenshots/DNS-AFTER-WebSearch-Testing_if_see.png)
 
 **Key observation:** `168.63.129.16` is a reserved Microsoft Azure IP used as the internal DNS resolver for all Azure VMs. Traffic to this IP is expected background noise and not an indicator of compromise.
 
@@ -76,10 +76,10 @@ The `dns` filter was applied to isolate DNS query traffic. Initial results showe
 The `http` filter was applied and a GET request from the Azure VM guest agent was identified. Using Follow > TCP Stream, the full unencrypted HTTP conversation was reconstructed revealing the Azure guest agent calling home to `168.63.129.16` to retrieve VM configuration data in XML format.
 
 **Screenshot: HTTP GET request**
-![HTTP GET](HTTP-GET-Request.png)
+![HTTP GET](screenshots/HTTP-GET-Request.png)
 
 **Screenshot: HTTP stream — Azure guest agent XML payload**
-![HTTP Payload](HTTP-Payload-Content.png)
+![HTTP Payload](screenshots/HTTP-Payload-Content.png)
 
 **Key observation:** Unencrypted HTTP traffic exposes full request and response content including headers, parameters, and response bodies. This technique — Follow > TCP Stream — is the same method used in Part 2 to extract credentials from the malicious PCAP.
 
@@ -90,7 +90,7 @@ The `http` filter was applied and a GET request from the Azure VM guest agent wa
 The filter `tcp.flags.syn == 1` was applied to identify TCP connection handshakes. Browser traffic was generated to `github.com` to produce external connections. Using `nslookup` to resolve the destination IP and `ip.addr ==` filtering, traffic to Akamai CDN (`2.18.67.76`) was isolated, revealing TLS on port 443 — expected HTTPS traffic.
 
 **Screenshot: TCP traffic analysis — SYN, SYN-ACK, ACK sequence and TLS**
-![TCP Traffic](TCP-Traffic-Analysis.png)
+![TCP Traffic](screenshots/TCP-Traffic-Analysis.png)
 
 **Key observation:** GitHub routes traffic through Akamai's CDN rather than resolving directly to the IP returned by nslookup. This is a real-world example of why IP-based filtering requires CDN awareness — the nslookup result alone was insufficient.
 
@@ -167,7 +167,7 @@ Follow > TCP Stream on an SMTP packet revealed the full credential dump. The ema
 Applying the `dns` filter to the malicious PCAP revealed a DNS query for `api.telegram.org` resolving to `149.154.167.220`. Telegram is a known platform used by threat actors for C2 communication and data exfiltration due to its legitimate appearance in network traffic and low likelihood of being blocked by enterprise firewalls.
 
 **Screenshot: Telegram C2 DNS query**
-![Telegram C2](Telegram-C2-Evidence.png)
+![Telegram C2](screenshots/Telegram-C2-Evidence.png)
 
 ---
 
